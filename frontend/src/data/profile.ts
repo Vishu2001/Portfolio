@@ -132,8 +132,8 @@ export type RoadmapStatus = "done" | "now" | "next";
 
 export const roadmap: { step: string; detail: string; status: RoadmapStatus }[] = [
   { step: "Next.js frontend", detail: "React, TypeScript, Tailwind", status: "done" },
-  { step: "Spring Boot API", detail: "Contact endpoint, validation", status: "now" },
-  { step: "Docker", detail: "Images + docker-compose", status: "next" },
+  { step: "Spring Boot API", detail: "Contact endpoint, validation", status: "done" },
+  { step: "Docker", detail: "Images + docker-compose", status: "now" },
   { step: "Redis", detail: "Rate limiting, caching", status: "next" },
   { step: "Kafka", detail: "Async email consumer", status: "next" },
   { step: "CI/CD", detail: "GitHub Actions → ECR", status: "next" },

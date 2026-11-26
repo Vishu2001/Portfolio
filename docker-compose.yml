@@ -1,0 +1,48 @@
+# Local development services. Start:  docker compose up -d     Stop:  docker compose down
+# (Data survives "down" because it lives in the named volume. "down -v" wipes it.)
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: portfolio-mysql
+    environment:
+      MYSQL_DATABASE: portfolio
+      MYSQL_USER: portfolio
+      # Local-only credentials for a database that exists only on this laptop.
+      # Production (AWS RDS) gets its own password from AWS Secrets Manager.
+      MYSQL_PASSWORD: portfolio
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      # Host port 3307 → container port 3306. 3307 avoids clashing with a MySQL
+      # installed directly on Windows, which uses 3306.
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uportfolio", "-pportfolio"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./backend            # built from backend/Dockerfile
+    image: portfolio-api:local
+    container_name: portfolio-backend
+    depends_on:
+      mysql:
+        condition: service_healthy   # wait until MySQL answers before starting
+    environment:
+      # Inside Docker's network, containers reach each other by service name:
+      # "mysql:3306", not "localhost:3307" (that door is only for your laptop).
+      DB_URL: jdbc:mysql://mysql:3306/portfolio
+      DB_USERNAME: portfolio
+      DB_PASSWORD: portfolio
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"
+    # Resource limits: the JVM uses 75% of this for its heap (see Dockerfile)
+    mem_limit: 768m
+    cpus: 1.0
+    restart: unless-stopped
+
+volumes:
+  mysql-data:

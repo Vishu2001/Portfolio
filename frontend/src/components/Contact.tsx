@@ -1,8 +1,8 @@
 import { profile } from "@/data/profile";
 import Reveal from "./Reveal";
+import ContactForm from "./ContactForm";
 
-// For now: email + links. In the backend step this gets a real form that POSTs
-// to the Spring Boot /api/contact endpoint (with Redis rate limiting).
+// The form POSTs to the Spring Boot API (backend/ → POST /api/contact).
 export default function Contact() {
   return (
     <section id="contact" className="relative mx-auto max-w-6xl px-4 pt-20 sm:px-6 sm:pt-28">
@@ -21,22 +21,22 @@ export default function Contact() {
                 I&apos;m open to backend engineering roles, especially in fintech. Or just say hi and talk
                 Spring Boot, databases or DSA.
               </p>
-              <div className="mt-10 flex flex-wrap justify-center gap-3">
-                <a
-                  href={`mailto:${profile.email}`}
-                  className="rounded-full bg-foreground px-8 py-4 font-semibold text-background transition-transform hover:-translate-y-0.5"
-                >
-                  Say hello →
-                </a>
+              <ContactForm />
+              <p className="mt-8 text-sm text-muted">
+                Prefer email?{" "}
+                <a href={`mailto:${profile.email}`} className="font-medium text-foreground underline-offset-4 hover:underline">
+                  {profile.email}
+                </a>{" "}
+                ·{" "}
                 <a
                   href={profile.links.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-full border border-border px-8 py-4 font-semibold transition-colors hover:border-accent hover:text-accent"
+                  className="font-medium text-foreground underline-offset-4 hover:underline"
                 >
                   LinkedIn ↗
                 </a>
-              </div>
+              </p>
             </div>
           </div>
         </div>

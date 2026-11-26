@@ -1,0 +1,15 @@
+# Files Docker should NOT send into the build (smaller, faster, no secrets/IDE junk)
+target/
+.idea/
+.vscode/
+*.iml
+.mvn/
+mvnw
+mvnw.cmd
+.git
+.gitignore
+.gitattributes
+Dockerfile
+.dockerignore
+*.log
+.env*
