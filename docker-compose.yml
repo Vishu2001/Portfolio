@@ -44,5 +44,22 @@ services:
     cpus: 1.0
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: ./frontend       # built from frontend/Dockerfile
+      args:
+        # Baked into the browser JavaScript at build time. The *browser* (on your laptop)
+        # calls the API, so it's the laptop address, not the container name "backend".
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+    image: portfolio-web:local
+    container_name: portfolio-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    mem_limit: 512m
+    cpus: 1.0
+    restart: unless-stopped
+
 volumes:
   mysql-data:

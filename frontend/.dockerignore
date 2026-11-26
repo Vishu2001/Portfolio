@@ -1,0 +1,17 @@
+# Keep the build context small and clean: never send these into the image build
+node_modules
+.next
+out
+build
+coverage
+.git
+.gitignore
+.vscode
+.idea
+*.log
+npm-debug.log*
+.env*
+Dockerfile
+.dockerignore
+README.md
+AGENTS.md
