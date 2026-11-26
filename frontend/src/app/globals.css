@@ -1,0 +1,202 @@
+@import "tailwindcss";
+
+/* `dark:` classes apply when <html data-theme="dark">. The theme switch flips that attribute. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Design tokens: change a colour here and it changes everywhere.
+   :root holds the dark theme (the default); [data-theme="light"] overrides it below. */
+:root {
+  /* Neutral black theme (no colour tint). The page is near-pure black so the black suit
+     in the photo (brightness ~45–65 of 255) still stands out against it. */
+  --background: #030303;
+  --surface: #0e0e10;
+  --surface-2: #161618;
+  --border: #242427;
+  --foreground: #ededef;
+  --muted: #8d8d94;
+  --accent: #6ee7b7;
+  --accent-2: #a78bfa;
+  --accent-3: #f9a8d4;
+  /* "overlay" = the colour used for subtle tints and hairlines: white on dark, black on light */
+  --overlay: #ffffff;
+  --page-gradient: none;
+  color-scheme: dark;
+}
+
+/* Light theme: white with a soft diagonal ("inclined") gradient down the page */
+:root[data-theme="light"] {
+  --background: #f5f6f9;
+  --surface: #ffffff;
+  --surface-2: #f1f2f6;
+  --border: #e1e3ea;
+  --foreground: #121318;
+  --muted: #5d6372;
+  --accent: #059669;
+  --accent-2: #7c3aed;
+  --accent-3: #db2777;
+  --overlay: #000000;
+  --page-gradient: linear-gradient(168deg, #eceef3 0%, #f7f8fa 28%, #ffffff 50%, #f3f7f6 75%, #f4f1fb 100%);
+  color-scheme: light;
+}
+
+/* Expose the tokens to Tailwind, so classes like bg-surface and text-accent work. */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
+  --color-overlay: var(--overlay);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+section[id] {
+  scroll-margin-top: 6rem;
+}
+
+/* Applied to the page wrapper (not <body>): <html> is only one screen tall, so a body
+   gradient would repeat every screen-height and leave hard lines. The wrapper spans
+   the whole page, so the incline runs once from top to bottom. */
+.page-bg {
+  background-image: var(--page-gradient);
+}
+
+/* Gradient text: green → violet → pink */
+.text-gradient {
+  background: linear-gradient(100deg, var(--accent), var(--accent-2) 55%, var(--accent-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Film-grain noise over the whole page: gives the dark background texture */
+.noise::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Slowly drifting colour blobs behind everything */
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(6%, -4%) scale(1.1); }
+  66% { transform: translate(-5%, 5%) scale(0.95); }
+}
+.aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.2;
+  animation: drift 22s ease-in-out infinite;
+}
+
+/* Faint grid */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border) 70%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Card whose border lights up under the mouse (see components/SpotlightCard.tsx) */
+.spotlight-card {
+  position: relative;
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 40px -24px rgb(0 0 0 / 35%);
+  backdrop-filter: blur(12px);
+  isolation: isolate;
+}
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(400px circle at var(--mx, -999px) var(--my, -999px), color-mix(in srgb, var(--overlay) 45%, transparent), transparent 45%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.spotlight-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: -1;
+  background: radial-gradient(500px circle at var(--mx, -999px) var(--my, -999px), color-mix(in srgb, var(--overlay) 4%, transparent), transparent 50%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.spotlight-card:hover::before,
+.spotlight-card:hover::after {
+  opacity: 1;
+}
+
+/* Infinite scrolling strip. The list is rendered twice, so moving by -50% loops seamlessly. */
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 35s linear infinite;
+}
+
+/* Fade-up when a section scrolls into view (see components/Reveal.tsx) */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Respect people who turn off animations in their OS settings */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .animate-marquee,
+  .animate-blink,
+  .aurora-blob { animation: none; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+}
