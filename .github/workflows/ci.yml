@@ -69,7 +69,9 @@ jobs:
         run: npm run lint
 
       - name: Type-check
-        run: npx tsc --noEmit
+        # "next typegen" first: Next.js generates route types (LayoutProps etc.) into
+        # git-ignored files, so a fresh checkout doesn't have them until this runs.
+        run: npm run typecheck
 
       - name: Production build
         run: npm run build
