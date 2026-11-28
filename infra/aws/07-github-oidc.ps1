@@ -13,6 +13,10 @@
 . "$PSScriptRoot\config.ps1"
 
 $GitHubRepo   = "Vishu2001/Portfolio"
+# GitHub puts permanent numeric IDs into the token's subject ("repo:Owner@ID/Repo@ID:..."), so a
+# deleted-and-recreated account or repo with the same name can never assume this role.
+# IDs: https://api.github.com/repos/Vishu2001/Portfolio  (owner.id, id)
+$GitHubRepoWithIds = "Vishu2001@74808565/Portfolio@1473548496"
 $DeployRole   = "portfolio-github-deploy"
 $OidcHost     = "token.actions.githubusercontent.com"
 $OidcArn      = "arn:aws:iam::${AccountId}:oidc-provider/$OidcHost"
@@ -46,9 +50,13 @@ $trust = Write-Json "trust.json" @{
         Condition = @{
             StringEquals = @{
                 "$OidcHost`:aud" = "sts.amazonaws.com"
-                # ONLY this repository, ONLY the main branch. Forks, other repos, other branches
-                # and pull requests cannot assume this role.
-                "$OidcHost`:sub" = "repo:${GitHubRepo}:ref:refs/heads/main"
+                # ONLY this repository: jobs on the main branch, or jobs in its "production"
+                # environment (the deploy jobs). Forks, other repos, other branches and pull
+                # requests cannot assume this role.
+                "$OidcHost`:sub" = @(
+                    "repo:${GitHubRepoWithIds}:ref:refs/heads/main",
+                    "repo:${GitHubRepoWithIds}:environment:production"
+                )
             }
         }
     })
