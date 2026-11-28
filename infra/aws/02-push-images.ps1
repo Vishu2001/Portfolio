@@ -1,6 +1,11 @@
 # Step 2: push the locally built Docker images to ECR (manual push; CI will automate this).
 # Tags each image with the current git commit id, so every image traces back to its code.
-# Usage:  .\infra\aws\02-push-images.ps1      (build first with: docker compose build)
+# Usage:  .\infra\aws\02-push-images.ps1                     (both images)
+#         .\infra\aws\02-push-images.ps1 -Only portfolio-api (just one)
+#         .\infra\aws\02-push-images.ps1 -Only portfolio-web -Source portfolio-web:aws
+#                                        (push a specific local image, e.g. the AWS frontend build)
+# Build first with: docker compose build
+param([string]$Only, [string]$Source)
 . "$PSScriptRoot\config.ps1"
 
 $tag = (git -C "$PSScriptRoot\..\.." rev-parse --short HEAD)
@@ -30,6 +35,7 @@ if ($LASTEXITCODE -ne 0) { throw "docker login to ECR failed" }
 
 # 2) + 3) Tag each local image with its ECR address and push it
 $images = @{ "portfolio-api" = "portfolio-api:local"; "portfolio-web" = "portfolio-web:local" }
+if ($Only) { $images = @{ $Only = $(if ($Source) { $Source } else { $images[$Only] }) } }
 foreach ($repo in $images.Keys) {
     $remote = "$Registry/${repo}:$tag"
     Write-Host "`nPushing $($images[$repo]) -> $remote" -ForegroundColor Cyan

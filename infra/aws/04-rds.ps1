@@ -17,7 +17,7 @@ $existingSg = aws rds describe-db-subnet-groups --region $Region `
 if (-not $existingSg) {
     aws rds create-db-subnet-group --region $Region --db-subnet-group-name $subnetGroup `
         --db-subnet-group-description "Subnets for the portfolio database" `
-        --subnet-ids $subnets --tags Key=project,Value=$Project | Out-Null
+        --subnet-ids @subnets --tags Key=project,Value=$Project | Out-Null
     Write-Host "  + created DB subnet group $subnetGroup ($($subnets.Count) subnets)" -ForegroundColor Green
 } else {
     Write-Host "  = DB subnet group $subnetGroup exists" -ForegroundColor DarkGray
