@@ -7,10 +7,16 @@
 $tmp = Join-Path $env:TEMP "portfolio-cf"; New-Item -ItemType Directory -Force $tmp | Out-Null
 $Comment = "portfolio-site"
 
-# AWS-managed policies (fixed IDs, same in every account)
-$CachingDisabled  = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
-$CachingOptimized = "658327ea-f89d-4fab-a63d-7e88639e58f3"
-$AllViewerExceptHostHeader = "b689b0a8-53d0-40ab-baf2-68738e2966ac"  # forward headers/cookies/query, not Host
+# AWS-managed policies, looked up by name (safer than hard-coding their IDs)
+function Get-CachePolicyId($name) {
+    aws cloudfront list-cache-policies --type managed `
+        --query "CachePolicyList.Items[?CachePolicy.CachePolicyConfig.Name=='$name'].CachePolicy.Id | [0]" --output text
+}
+$CachingDisabled  = Get-CachePolicyId "Managed-CachingDisabled"
+$CachingOptimized = Get-CachePolicyId "Managed-CachingOptimized"
+# Forward headers/cookies/query string to the origin, but not Host
+$AllViewerExceptHostHeader = aws cloudfront list-origin-request-policies --type managed `
+    --query "OriginRequestPolicyList.Items[?OriginRequestPolicy.OriginRequestPolicyConfig.Name=='Managed-AllViewerExceptHostHeader'].OriginRequestPolicy.Id | [0]" --output text
 
 $existing = aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='$Comment'].[Id,DomainName]" --output text
 # With no distributions at all, the CLI prints the literal text "None"
@@ -74,4 +80,33 @@ if ($existing -and $existing -ne "None") {
 
 Write-Host "Waiting until the distribution is deployed to all edge locations (5-15 min)..." -ForegroundColor Cyan
 aws cloudfront wait distribution-deployed --id $id
+
+# ---------------------------------------------------------------- lock the load balancer to CloudFront
+# Port 80 on the load balancer now accepts ONLY CloudFront's servers (AWS-managed prefix list,
+# kept up to date by AWS). Visitors can no longer bypass HTTPS via the elb.amazonaws.com address,
+# and the backend can safely trust the X-Forwarded-For entries added by CloudFront + the ALB.
+Write-Host "`nRestricting the load balancer to CloudFront only" -ForegroundColor Cyan
+$VpcId    = aws ec2 describe-vpcs --region $Region --filters Name=is-default,Values=true --query "Vpcs[0].VpcId" --output text
+$albSgId  = aws ec2 describe-security-groups --region $Region --filters Name=group-name,Values=$SgAlb Name=vpc-id,Values=$VpcId `
+    --query "SecurityGroups[0].GroupId" --output text
+$cfPrefix = aws ec2 describe-managed-prefix-lists --region $Region `
+    --filters Name=prefix-list-name,Values=com.amazonaws.global.cloudfront.origin-facing --query "PrefixLists[0].PrefixListId" --output text
+$hasCf = aws ec2 describe-security-group-rules --region $Region --filters Name=group-id,Values=$albSgId `
+    --query "SecurityGroupRules[?PrefixListId=='$cfPrefix'] | length(@)" --output text
+if ($hasCf -eq "0") {
+    aws ec2 authorize-security-group-ingress --region $Region --group-id $albSgId `
+        --ip-permissions "IpProtocol=tcp,FromPort=80,ToPort=80,PrefixListIds=[{PrefixListId=$cfPrefix,Description=CloudFront only}]" | Out-Null
+    Write-Host "  + port 80 allowed from CloudFront ($cfPrefix)" -ForegroundColor Green
+}
+# Remove the old "anyone on the internet" rules (IPv4 0.0.0.0/0 and IPv6 ::/0)
+$openRules = aws ec2 describe-security-group-rules --region $Region --filters Name=group-id,Values=$albSgId `
+    --query "SecurityGroupRules[?IsEgress==``false`` && (CidrIpv4=='0.0.0.0/0' || CidrIpv6=='::/0')].SecurityGroupRuleId" --output text
+if ($openRules -and $openRules -ne "None") {
+    # One call per rule: the aws wrapper in config.ps1 joins list arguments with commas
+    foreach ($ruleId in ($openRules -split "\s+" | Where-Object { $_ })) {
+        aws ec2 revoke-security-group-ingress --region $Region --group-id $albSgId --security-group-rule-ids $ruleId | Out-Null
+    }
+    Write-Host "  - removed public internet access to the load balancer" -ForegroundColor Green
+}
+
 Write-Host "`nSite over HTTPS: https://$domain/" -ForegroundColor Green

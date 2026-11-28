@@ -135,7 +135,7 @@ jobs:
       id-token: write
     environment:
       name: production
-      url: http://portfolio-alb-1369660137.ap-southeast-2.elb.amazonaws.com/
+      url: https://dxssrknfb9kyt.cloudfront.net/
     steps:
       - name: Log in to AWS (OIDC, no stored keys)
         uses: aws-actions/configure-aws-credentials@v4

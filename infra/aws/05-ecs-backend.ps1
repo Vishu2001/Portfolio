@@ -135,6 +135,19 @@ if ($hasApiRule -eq "0") {
 Write-Host "`n[6/7] Task definition (image portfolio-api:$Tag)" -ForegroundColor Cyan
 $DbEndpoint = aws rds describe-db-instances --region $Region --db-instance-identifier $DbInstanceId `
     --query "DBInstances[0].Endpoint.Address" --output text
+
+# If the CloudFront distribution exists (08-cloudfront.ps1), visitors come through it:
+#  - the browser's Origin is https://<cloudfront domain>  → must be allowed by CORS
+#  - X-Forwarded-For has 2 proxies (CloudFront, then the load balancer) → trust 2
+$CfDomain = aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='portfolio-site'].DomainName | [0]" --output text
+if ($CfDomain -and $CfDomain -ne "None") {
+    $CorsOrigins    = "https://$CfDomain,http://$AlbDns"
+    $TrustedProxies = "2"
+} else {
+    $CorsOrigins    = "http://$AlbDns"
+    $TrustedProxies = "1"
+}
+Write-Host "  CORS origins: $CorsOrigins | trusted proxies: $TrustedProxies" -ForegroundColor DarkGray
 $taskDef = Write-Json "taskdef-api.json" @{
     family                  = $ServiceApi
     networkMode             = "awsvpc"
@@ -155,7 +168,8 @@ $taskDef = Write-Json "taskdef-api.json" @{
         environment  = @(
             @{ name = "SPRING_PROFILES_ACTIVE";   value = "prod" },
             @{ name = "DB_URL";                   value = "jdbc:mysql://${DbEndpoint}:3306/$DbName" },
-            @{ name = "APP_CORS_ALLOWED_ORIGINS"; value = "http://$AlbDns" },
+            @{ name = "APP_CORS_ALLOWED_ORIGINS"; value = $CorsOrigins },
+            @{ name = "APP_TRUSTED_PROXIES";      value = $TrustedProxies },
             # Containers in one Fargate task share a network, so the sidecar is at localhost
             @{ name = "REDIS_HOST";               value = "localhost" },
             @{ name = "REDIS_PORT";               value = "6379" }

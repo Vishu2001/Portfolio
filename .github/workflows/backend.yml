@@ -126,7 +126,7 @@ jobs:
       id-token: write
     environment:
       name: production                # shows deployments on the repo page
-      url: http://portfolio-alb-1369660137.ap-southeast-2.elb.amazonaws.com/actuator/health
+      url: https://dxssrknfb9kyt.cloudfront.net/actuator/health
     steps:
       - name: Log in to AWS (OIDC, no stored keys)
         uses: aws-actions/configure-aws-credentials@v4

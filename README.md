@@ -11,6 +11,8 @@ A full-stack personal portfolio built like a production system: a **Next.js** fr
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-compose-2496ED?logo=docker&logoColor=white)
 
+**Live:** https://dxssrknfb9kyt.cloudfront.net
+
 ![Portfolio home page: dark theme hero with name, role and photo](docs/screenshot.png)
 
 ---
@@ -171,7 +173,7 @@ The frontend reads `NEXT_PUBLIC_API_URL` **at build time** (`http://localhost:80
 - [x] CI/CD with GitHub Actions: tests, image builds, automatic deploys to AWS (OIDC, no stored keys)
 - [x] AWS deployment: ECR, ECS Fargate, Application Load Balancer, RDS MySQL, Secrets Manager
 - [x] Redis rate limiting on the contact form (5 per minute per IP, 429 + Retry-After)
-- [ ] HTTPS via CloudFront (waiting on AWS account verification)
+- [x] HTTPS via CloudFront (load balancer reachable only from CloudFront)
 - [ ] Kafka: async email notifications
 - [ ] Kubernetes manifests
 
