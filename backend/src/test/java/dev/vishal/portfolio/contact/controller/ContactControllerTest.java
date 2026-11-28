@@ -22,7 +22,7 @@ import dev.vishal.portfolio.contact.repository.ContactRepository;
 
 /** Full-stack HTTP tests: controller → service → repository → MySQL, plus error handling and CORS. */
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest
+@SpringBootTest(properties = "app.rate-limit.contact.max-requests=1000") // these tests aren't about rate limiting
 @AutoConfigureMockMvc
 class ContactControllerTest {
 

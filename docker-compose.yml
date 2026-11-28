@@ -23,6 +23,22 @@ services:
       timeout: 3s
       retries: 20
 
+  redis:
+    image: redis:8-alpine
+    container_name: portfolio-redis
+    # Pure in-memory cache for rate-limit counters: no disk persistence needed
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      # Laptop port 6380 → container 6379, so the backend run from IntelliJ can reach it.
+      # 6380 avoids clashing with a Redis installed directly on Windows (which uses 6379).
+      - "6380:6379"
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   backend:
     build: ./backend            # built from backend/Dockerfile
     image: portfolio-api:local
@@ -30,7 +46,11 @@ services:
     depends_on:
       mysql:
         condition: service_healthy   # wait until MySQL answers before starting
+      redis:
+        condition: service_healthy
     environment:
+      REDIS_HOST: redis            # the redis service, by name, inside Docker's network
+      REDIS_PORT: "6379"           # its real port inside the network (6380 is only the laptop door)
       # Inside Docker's network, containers reach each other by service name:
       # "mysql:3306", not "localhost:3307" (that door is only for your laptop).
       DB_URL: jdbc:mysql://mysql:3306/portfolio

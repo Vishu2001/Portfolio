@@ -147,12 +147,18 @@ $taskDef = Write-Json "taskdef-api.json" @{
         name         = "api"
         image        = "$Registry/portfolio-api:$Tag"
         essential    = $true
+        memory       = 896          # hard limit for Spring Boot; the JVM heap is 75% of this
         portMappings = @(@{ containerPort = 8080; protocol = "tcp" })
+        # Start the API only after the Redis sidecar answers PING
+        dependsOn    = @(@{ containerName = "redis"; condition = "HEALTHY" })
         # Plain (non-secret) settings
         environment  = @(
             @{ name = "SPRING_PROFILES_ACTIVE";   value = "prod" },
             @{ name = "DB_URL";                   value = "jdbc:mysql://${DbEndpoint}:3306/$DbName" },
-            @{ name = "APP_CORS_ALLOWED_ORIGINS"; value = "http://$AlbDns" }
+            @{ name = "APP_CORS_ALLOWED_ORIGINS"; value = "http://$AlbDns" },
+            # Containers in one Fargate task share a network, so the sidecar is at localhost
+            @{ name = "REDIS_HOST";               value = "localhost" },
+            @{ name = "REDIS_PORT";               value = "6379" }
         )
         # Secrets: ECS reads these fields of the RDS secret at start and sets them as env vars.
         # The values never appear in this file, the task definition, git, or the logs.
@@ -163,6 +169,21 @@ $taskDef = Write-Json "taskdef-api.json" @{
         logConfiguration = @{
             logDriver = "awslogs"
             options   = @{ "awslogs-group" = $LogGroupApi; "awslogs-region" = $Region; "awslogs-stream-prefix" = "api" }
+        }
+    },
+    # Sidecar: a small Redis for rate-limit counters, in the same task (no ElastiCache cost).
+    # In-memory only; counters reset when the task is replaced, which is fine for rate limiting.
+    @{
+        name      = "redis"
+        image     = "public.ecr.aws/docker/library/redis:8-alpine"   # AWS's mirror of Docker Hub
+        essential = $true
+        memory    = 128
+        command   = @("redis-server", "--save", "", "--appendonly", "no",
+                      "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru")
+        healthCheck = @{ command = @("CMD", "redis-cli", "ping"); interval = 10; timeout = 3; retries = 3; startPeriod = 5 }
+        logConfiguration = @{
+            logDriver = "awslogs"
+            options   = @{ "awslogs-group" = $LogGroupApi; "awslogs-region" = $Region; "awslogs-stream-prefix" = "redis" }
         }
     })
 }

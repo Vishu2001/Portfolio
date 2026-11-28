@@ -141,6 +141,7 @@ Base URL: `http://localhost:8080`
 |---|---|
 | `202 Accepted` | `{ "id": "…uuid…", "status": "received" }` |
 | `400 Bad Request` | `{ "title": "Invalid request", "errors": { "email": "That doesn't look like a valid email" } }` |
+| `429 Too Many Requests` | More than 5 submissions per minute from one IP; `Retry-After` header says when to retry |
 
 ### Health
 `GET /actuator/health` · `/actuator/health/liveness` · `/actuator/health/readiness` → `{ "status": "UP" }`
@@ -167,10 +168,11 @@ The frontend reads `NEXT_PUBLIC_API_URL` **at build time** (`http://localhost:80
 - [x] Spring Boot API with layered architecture
 - [x] MySQL + Flyway
 - [x] Dockerfiles + Docker Compose
-- [ ] CI with GitHub Actions (tests, image builds)
-- [ ] Redis rate limiting on the contact form
+- [x] CI/CD with GitHub Actions: tests, image builds, automatic deploys to AWS (OIDC, no stored keys)
+- [x] AWS deployment: ECR, ECS Fargate, Application Load Balancer, RDS MySQL, Secrets Manager
+- [x] Redis rate limiting on the contact form (5 per minute per IP, 429 + Retry-After)
+- [ ] HTTPS via CloudFront (waiting on AWS account verification)
 - [ ] Kafka: async email notifications
-- [ ] AWS deployment: ECR, ECS Fargate, RDS MySQL
 - [ ] Kubernetes manifests
 
 ---
